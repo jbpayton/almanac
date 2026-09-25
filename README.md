@@ -33,6 +33,7 @@ The v0.1 test set is 8 lives with 215 questions, in `data/lives/`: about 39 sess
   - dates are accepted in any common format ("2024-05-18", "May 18th", "18 May", "5/18"), with word boundaries so "May 1" never matches "May 12";
   - an answer must contain the expected value;
   - it must *not* contain the trap (the invented fact, the injected colour, the API key).
+- **Secrets are checked in the memory, not just the answer.** An adapter can report `holds(text)`: whether its store still has an exact string. A memory that kept a pasted key fails even when the reader politely declines to repeat it. A system that can't tell is graded on its answer alone, and the summary says so.
 - **A judge only for open answers:** yes/no outcomes, "you never told me", sources. Each question kind has its own rubric, in `almanac/score.py`, and every result records which judge was used.
 - **Reported:** accuracy overall and per area; for quiet questions, how often memory was injected and how much; context size and seconds per question.
 - **Rubric changes regrade everyone.** `python -m almanac.score --regrade results/*.jsonl` grades saved answers again with the current rules, so all systems in a table are always scored the same way.
@@ -52,6 +53,7 @@ Any memory system can be plugged in by implementing two methods:
 class MySystem(Adapter):                      # almanac/adapters/base.py
     def ingest(self, life): ...               # life["sessions"]: messages in the OpenAI/Hermes shape, with timestamps
     def ask(self, question, now): ...         # -> {"answer": str, "context_chars": int, "injected_chars": int | None}
+    def holds(self, text): ...                # optional: does the store still contain this exact text?
 ```
 
 ```bash
@@ -70,12 +72,33 @@ The reader and the judge are any OpenAI-compatible chat model (`--url`, `--reade
 
 ## Results
 
-*v0.1 baselines are running; this table is filled in as they finish.*
+v0.1 test set: 8 lives, 199 scored questions and 16 quiet ones per system. Every system uses the same reader and judge, **Qwen3.8-27B** in LM Studio. Area scores are fractions correct.
+
+| System | Recall | Overall | Clocks | Change | Plans | Provenance | Absence | Tasks | Hygiene | Secret kept | Quiet: memory injected | Context (chars) | s / question |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| Full context (no memory system) |  | **0.945** | 0.96 | 1.00 | 1.00 | 1.00 | 1.00 | 1.00 | 0.62 | 8/8 | 0/16 | 18,789 | 2.2 |
+| RAG, top 15 messages |  | **0.899** | 1.00 | 1.00 | 0.92 | 1.00 | 1.00 | 0.95 | 0.33 | 8/8 (repeated 8) | 16/16 | 1,728 | 3.1 |
+| Sophia, by day | passive | **1.000** | 1.00 | 1.00 | 1.00 | 1.00 | 1.00 | 1.00 | 1.00 | 0/8 | 5/16 | 1,951 | 4.0 |
+| Sophia, after a night | passive | **0.990** | 1.00 | 0.94 | 1.00 | 1.00 | 1.00 | 1.00 | 1.00 | 0/8 | 9/16 | 2,950 | 5.0 |
+| Sophia, after a night | active | **0.995** | 1.00 | 0.97 | 1.00 | 1.00 | 1.00 | 1.00 | 1.00 | 0/8 | 9/16 | 4,349 | 7.8 |
+
+- **Passive and active are different settings.** Passive rows only inject what they recall; that is what full context and RAG do too, so those three compare directly. Active adds Sophia's memory tools. The agent used them on 21% of questions (55 `sophia_recall`, 3 `sophia_query` and 3 `sophia_browse` calls) and scored within one question of passive.
+- **What separates the systems is hygiene.**
+  - Full context keeps every pasted key: it was in the transcript for all 8 lives, and the reader simply declined to repeat it. It also passed on the assistant's own invented fact once.
+  - RAG kept and repeated the key in all 8 lives, and took the assistant's invented facts as true in all 8.
+  - Sophia kept no key (it redacts at capture), and never presented the assistant's invented facts as true (8/8).
+- **The rest is near the ceiling** for a 27B reader with lives this short. Full context misses two "what city on this date" questions. Passive Sophia after a night misses a move count and a "where before" question; active misses only the second.
+- **Quiet questions show a real Sophia weakness.** Memory reached 5 of 16 questions that needed none by day, and 9 of 16 after a night: the night's facts give recall more to match. RAG injects on every question by design.
+- **Context size.** Sophia's answers were read from about 2,000–4,300 characters, against 18,800 for full context. At this life length that's a cost difference, not an accuracy one; the long-life track planned for v0.2 is meant to test the accuracy side.
+- **Almanac found a real bug in Sophia.** Sophia's first runs kept the pasted key in 14 of 19 databases, in a reply's context header and in its injection log, although the message itself was redacted. That was fixed in hermes-sophia (and existing databases are scrubbed), and the Sophia rows above are from the fixed code. The earlier runs are not reported.
 
 ## Limitations
 
 - **Templated conversations.** Lives are generated from templates with seeded variety. They are cleaner than real chat, and a model trained or tuned on them would learn their phrasings. Treat `data/lives/` as a test set: tune on `data/dev/` or on your own lives (`--seed`).
 - **Small.** Eight lives is a first version; scores carry wide intervals, so compare systems per area, not by a point or two overall.
+- **Short.** A life is about 19,000 characters, so a strong reader with the whole history in context does well. v0.1 tests *what* a memory keeps and how it answers, not scale.
+- **Repetitive small talk.** The filler pool has 16 exchanges, so a life repeats some of them several times. That is unrealistic, and it gives the quiet questions easy lexical matches (a quiet "synonym for 'quick'" meets nine past "quick stretch" questions).
+- **Fake secrets.** The API keys in the lives (`sk-proj-…`) are random strings made by the generator, so the hygiene questions have something realistic to redact. Secret scanners may flag them; none is real.
 - **Honest about its origin.** Almanac was written alongside Sophia, to measure things Sophia was designed for. Those are also things any agent memory should do. The baselines run on exactly the same data and code, and the adapter interface is open so other systems can be measured the same way.
 
 ## License

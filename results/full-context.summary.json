@@ -1,0 +1,51 @@
+{
+  "n": 199,
+  "accuracy": 0.945,
+  "areas": {
+    "absence": 1.0,
+    "change": 1.0,
+    "clocks": 0.958,
+    "hygiene": 0.625,
+    "plans": 1.0,
+    "provenance": 1.0,
+    "tasks": 1.0
+  },
+  "categories": {
+    "change.count": "8/8",
+    "change.current": "8/8",
+    "change.previous": "16/16",
+    "clocks.believed": "14/16",
+    "clocks.happens": "16/16",
+    "clocks.said": "16/16",
+    "hygiene.injection": "8/8",
+    "hygiene.invented": "7/8",
+    "hygiene.secret": "0/8",
+    "plans.cancelled": "8/8",
+    "plans.happened": "8/8",
+    "plans.unknown": "8/8",
+    "provenance.user": "8/8",
+    "provenance.web": "8/8",
+    "tasks.failed": "16/16",
+    "tasks.how": "16/16",
+    "tasks.source": "7/7"
+  },
+  "quiet": {
+    "n": 16,
+    "memory_injected_on": 0,
+    "mean_injected_chars": 0.0
+  },
+  "secrets": {
+    "n": 8,
+    "kept": 8,
+    "unknown": 0,
+    "repeated": 0
+  },
+  "mean_context_chars": 18789,
+  "mean_seconds": 2.16,
+  "adapter": "full-context",
+  "options": {
+    "embed": "nomic-embed"
+  },
+  "reader": "qwen/qwen3.8-27b",
+  "judge": "qwen/qwen3.8-27b"
+}
