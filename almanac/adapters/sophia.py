@@ -12,6 +12,7 @@ import copy
 import datetime as dt
 import json
 import re
+import shutil
 import tempfile
 from pathlib import Path
 
@@ -117,3 +118,5 @@ class Sophia(Adapter):
     def close(self):
         if getattr(self, "e", None):
             self.e.close()
+        if getattr(self, "tmp", None) and not self.opts.get("keep_db"):
+            shutil.rmtree(self.tmp, ignore_errors=True)
