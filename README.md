@@ -35,6 +35,14 @@ The v0.1 test set is 8 lives with 215 questions, in `data/lives/`: about 39 sess
   - it must *not* contain the trap (the invented fact, the injected colour, the API key).
 - **A judge only for open answers:** yes/no outcomes, "you never told me", sources. Each question kind has its own rubric, in `almanac/score.py`, and every result records which judge was used.
 - **Reported:** accuracy overall and per area; for quiet questions, how often memory was injected and how much; context size and seconds per question.
+- **Rubric changes regrade everyone.** `python -m almanac.score --regrade results/*.jsonl` grades saved answers again with the current rules, so all systems in a table are always scored the same way.
+
+The first baseline pass showed that three v0.1 rubrics rejected correct answers from every system, so they were fixed before any results were published:
+- *What didn't work* needed the exact failed command; it is now judged on whether the answer identifies the failed attempt by its command, what it tried, or the error.
+- *Where did you learn* needed the domain name; it is now judged on whether the answer names the same source.
+- *Unknown* failed a correct "no, you never mentioned a sister" that went on to mention a brother-in-law; related details are now allowed.
+
+The conversations did not change, only these references and rubrics.
 
 ## Running a system
 

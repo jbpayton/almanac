@@ -1764,15 +1764,13 @@
    "id": "life-05-q19",
    "category": "tasks.failed",
    "question": "What didn't work when we tried to set up the virtualenv for the reports project?",
-   "answer": "cd ~/reports && python3.9 -m venv .venv && .venv/bin/pip install -r requirements.txt",
-   "kind": "value",
+   "answer": "`cd ~/reports && python3.9 -m venv .venv && .venv/bin/pip install -r requirements.txt`, which failed with: ERROR: Package 'reports' requires a different Python: 3.9.18 not in '>=3.11'",
+   "kind": "attempt",
    "check": {
-    "any": [
-     "python3.9"
-    ],
+    "any": [],
     "dates": [],
     "not": [],
-    "judge": false
+    "judge": true
    }
   },
   {
@@ -1794,31 +1792,26 @@
    "id": "life-05-q21",
    "category": "tasks.failed",
    "question": "What didn't work when we tried to renew the TLS certificate for shop.example.com?",
-   "answer": "sudo certbot certonly --standalone -d shop.example.com",
-   "kind": "value",
+   "answer": "`sudo certbot certonly --standalone -d shop.example.com`, which failed with: Problem binding to port 80: Could not bind to IPv4 or IPv6.",
+   "kind": "attempt",
    "check": {
-    "any": [
-     "--standalone"
-    ],
+    "any": [],
     "dates": [],
     "not": [],
-    "judge": false
+    "judge": true
    }
   },
   {
    "id": "life-05-q22",
    "category": "tasks.source",
    "question": "Where did you learn how to renew the TLS certificate for shop.example.com?",
-   "answer": "https://eff-certbot.readthedocs.io/en/stable/using.html#renewing-certificates",
-   "kind": "value",
+   "answer": "From the Certbot documentation's page on renewing certificates, which the assistant read on the web (https://eff-certbot.readthedocs.io/en/stable/using.html#renewing-certificates).",
+   "kind": "source",
    "check": {
-    "any": [
-     "eff-certbot",
-     "eff-certbot.readthedocs.io"
-    ],
+    "any": [],
     "dates": [],
     "not": [],
-    "judge": false
+    "judge": true
    }
   },
   {

@@ -1654,31 +1654,26 @@
    "id": "life-01-q19",
    "category": "tasks.failed",
    "question": "What didn't work when we tried to free up disk space on the build server?",
-   "answer": "ssh build-1 'sudo apt-get autoremove'",
-   "kind": "value",
+   "answer": "`ssh build-1 'sudo apt-get autoremove'`, which failed with: 0 upgraded, 0 newly installed, 0 to remove",
+   "kind": "attempt",
    "check": {
-    "any": [
-     "autoremove"
-    ],
+    "any": [],
     "dates": [],
     "not": [],
-    "judge": false
+    "judge": true
    }
   },
   {
    "id": "life-01-q20",
    "category": "tasks.source",
    "question": "Where did you learn how to free up disk space on the build server?",
-   "answer": "https://docs.docker.com/engine/manage-resources/pruning/",
-   "kind": "value",
+   "answer": "From Docker's documentation on pruning unused objects, which the assistant read on the web (https://docs.docker.com/engine/manage-resources/pruning/).",
+   "kind": "source",
    "check": {
-    "any": [
-     "docs",
-     "docs.docker.com"
-    ],
+    "any": [],
     "dates": [],
     "not": [],
-    "judge": false
+    "judge": true
    }
   },
   {
@@ -1700,15 +1695,13 @@
    "id": "life-01-q22",
    "category": "tasks.failed",
    "question": "What didn't work when we tried to rotate the nginx logs on web-1?",
-   "answer": "ssh web-1 'rm /var/log/nginx/access.log'",
-   "kind": "value",
+   "answer": "`ssh web-1 'rm /var/log/nginx/access.log'`, which failed with: rm: cannot remove '/var/log/nginx/access.log': Permission denied",
+   "kind": "attempt",
    "check": {
-    "any": [
-     "rm /var/log/nginx"
-    ],
+    "any": [],
     "dates": [],
     "not": [],
-    "judge": false
+    "judge": true
    }
   },
   {

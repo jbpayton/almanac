@@ -1632,15 +1632,13 @@
    "id": "life-01-q19",
    "category": "tasks.failed",
    "question": "What didn't work when we tried to set up the virtualenv for the reports project?",
-   "answer": "cd ~/reports && python3.9 -m venv .venv && .venv/bin/pip install -r requirements.txt",
-   "kind": "value",
+   "answer": "`cd ~/reports && python3.9 -m venv .venv && .venv/bin/pip install -r requirements.txt`, which failed with: ERROR: Package 'reports' requires a different Python: 3.9.18 not in '>=3.11'",
+   "kind": "attempt",
    "check": {
-    "any": [
-     "python3.9"
-    ],
+    "any": [],
     "dates": [],
     "not": [],
-    "judge": false
+    "judge": true
    }
   },
   {
@@ -1662,15 +1660,13 @@
    "id": "life-01-q21",
    "category": "tasks.failed",
    "question": "What didn't work when we tried to rotate the nginx logs on web-1?",
-   "answer": "ssh web-1 'rm /var/log/nginx/access.log'",
-   "kind": "value",
+   "answer": "`ssh web-1 'rm /var/log/nginx/access.log'`, which failed with: rm: cannot remove '/var/log/nginx/access.log': Permission denied",
+   "kind": "attempt",
    "check": {
-    "any": [
-     "rm /var/log/nginx"
-    ],
+    "any": [],
     "dates": [],
     "not": [],
-    "judge": false
+    "judge": true
    }
   },
   {

@@ -195,12 +195,11 @@ class Life:
             self.tool_segment(d, f"Can you {t['ask']}?", calls, f"Done: the first attempt failed, so I used `{t['work']}`.",
                               followup="That worked, thanks!")
             self.ask("tasks.how", f"How did we {t['goal']} last time?", t["work"], any_of=[t["key"]], judge=False)
-            self.ask("tasks.failed", f"What didn't work when we tried to {t['goal']}?", t["dead"][0],
-                     any_of=[t["dead_key"]], judge=False)
+            self.ask("tasks.failed", f"What didn't work when we tried to {t['goal']}?",
+                     f"`{t['dead'][0]}`, which failed with: {t['dead'][1]}", kind="attempt")
             if t["doc"]:
-                dom = t["doc"][0].split("/")[2]
-                self.ask("tasks.source", f"Where did you learn how to {t['goal']}?", t["doc"][0],
-                         any_of=[dom.split(".")[0], dom], judge=False)
+                self.ask("tasks.source", f"Where did you learn how to {t['goal']}?",
+                         f"From {t['doc_name']}, which the assistant read on the web ({t['doc'][0]}).", kind="source")
 
     def hygiene(self):
         color, wrong = self.rng.choice(P.COLORS), self.rng.choice(P.WRONG_COLORS)

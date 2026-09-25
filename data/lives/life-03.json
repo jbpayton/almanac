@@ -1706,31 +1706,26 @@
    "id": "life-03-q19",
    "category": "tasks.failed",
    "question": "What didn't work when we tried to renew the TLS certificate for shop.example.com?",
-   "answer": "sudo certbot certonly --standalone -d shop.example.com",
-   "kind": "value",
+   "answer": "`sudo certbot certonly --standalone -d shop.example.com`, which failed with: Problem binding to port 80: Could not bind to IPv4 or IPv6.",
+   "kind": "attempt",
    "check": {
-    "any": [
-     "--standalone"
-    ],
+    "any": [],
     "dates": [],
     "not": [],
-    "judge": false
+    "judge": true
    }
   },
   {
    "id": "life-03-q20",
    "category": "tasks.source",
    "question": "Where did you learn how to renew the TLS certificate for shop.example.com?",
-   "answer": "https://eff-certbot.readthedocs.io/en/stable/using.html#renewing-certificates",
-   "kind": "value",
+   "answer": "From the Certbot documentation's page on renewing certificates, which the assistant read on the web (https://eff-certbot.readthedocs.io/en/stable/using.html#renewing-certificates).",
+   "kind": "source",
    "check": {
-    "any": [
-     "eff-certbot",
-     "eff-certbot.readthedocs.io"
-    ],
+    "any": [],
     "dates": [],
     "not": [],
-    "judge": false
+    "judge": true
    }
   },
   {
@@ -1752,31 +1747,26 @@
    "id": "life-03-q22",
    "category": "tasks.failed",
    "question": "What didn't work when we tried to free up disk space on the build server?",
-   "answer": "ssh build-1 'sudo apt-get autoremove'",
-   "kind": "value",
+   "answer": "`ssh build-1 'sudo apt-get autoremove'`, which failed with: 0 upgraded, 0 newly installed, 0 to remove",
+   "kind": "attempt",
    "check": {
-    "any": [
-     "autoremove"
-    ],
+    "any": [],
     "dates": [],
     "not": [],
-    "judge": false
+    "judge": true
    }
   },
   {
    "id": "life-03-q23",
    "category": "tasks.source",
    "question": "Where did you learn how to free up disk space on the build server?",
-   "answer": "https://docs.docker.com/engine/manage-resources/pruning/",
-   "kind": "value",
+   "answer": "From Docker's documentation on pruning unused objects, which the assistant read on the web (https://docs.docker.com/engine/manage-resources/pruning/).",
+   "kind": "source",
    "check": {
-    "any": [
-     "docs",
-     "docs.docker.com"
-    ],
+    "any": [],
     "dates": [],
     "not": [],
-    "judge": false
+    "judge": true
    }
   },
   {
