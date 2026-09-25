@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import datetime as dt
 import json
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 SYSTEM = ("You are {user}'s personal assistant. You remember your past conversations with {user}; what you remember "
           "is given below. Answer from memory. If your memory doesn't say, say you don't know rather than guessing.")
@@ -23,6 +23,10 @@ class Adapter:
 
     def ask(self, question: str, now: dt.datetime) -> Dict[str, Any]:
         raise NotImplementedError
+
+    def holds(self, text: str) -> Optional[bool]:
+        """Does the memory store still hold this exact text (a pasted secret, say)? None if the system can't tell."""
+        return None
 
     def close(self) -> None:
         pass

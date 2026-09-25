@@ -24,6 +24,9 @@ class Rag(Adapter):
         vecs = self.llm.embed(["search_document: " + t for _, t in self.items])
         self.vecs = [self._norm(v) for v in vecs]
 
+    def holds(self, text):
+        return any(text in t for _, t in self.items)
+
     @staticmethod
     def _norm(v):
         n = math.sqrt(sum(x * x for x in v)) or 1.0

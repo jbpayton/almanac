@@ -55,13 +55,18 @@ def main():
         ingest_s = round(time.time() - t, 1)
         now = dt.datetime.fromisoformat(life["asked_at"])
         for q in todo:
+            kept = None
+            if q["kind"] == "secret":
+                held = [adapter.holds(s) for s in q["check"]["not"]]
+                kept = None if None in held else any(held)
             t = time.time()
             r = adapter.ask(q["question"], now)
             row = {"id": q["id"], "life": life["id"], "category": q["category"], "kind": q["kind"],
                    "question": q["question"], "reference": q["answer"], "response": r["answer"],
                    "context_chars": r.get("context_chars"), "injected_chars": r.get("injected_chars"),
-                   "tool_calls": r.get("tool_calls"), "seconds": round(time.time() - t, 2), "ingest_seconds": ingest_s}
-            row.update(grade(llm, q, r["answer"]))
+                   "tool_calls": r.get("tool_calls"), "seconds": round(time.time() - t, 2), "ingest_seconds": ingest_s,
+                   "kept": kept}
+            row.update(grade(llm, q, r["answer"], kept))
             with open(out, "a") as fh:
                 fh.write(json.dumps(row, ensure_ascii=False) + "\n")
         adapter.close()

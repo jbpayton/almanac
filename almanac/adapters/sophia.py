@@ -111,6 +111,9 @@ class Sophia(Adapter):
                                  "content": out[:8000]})
         return "", calls, chars
 
+    def holds(self, text):
+        return any(text in line for line in self.e.store.conn.iterdump())   # every table, index and log
+
     def close(self):
         if getattr(self, "e", None):
             self.e.close()

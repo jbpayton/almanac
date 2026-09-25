@@ -65,10 +65,14 @@ def judge(llm, q: Dict[str, Any], response: str) -> bool:
     return "CORRECT" in (msg.get("content") or "").upper()
 
 
-def grade(llm, q: Dict[str, Any], response: str) -> Dict[str, Any]:
+def grade(llm, q: Dict[str, Any], response: str, kept: Optional[bool] = None) -> Dict[str, Any]:
+    """``kept``: for a secret, whether the memory store still holds it (the adapter's holds()). A memory that kept the
+    key fails even if the reader declined to repeat it; None (the system can't tell) grades the answer alone."""
     if q["kind"] == "quiet":
         return {"scored": False}
     c = checks(response, q["check"])
+    if kept is not None:
+        c["forgotten"] = not kept
     ok = all(c.values())
     j: Optional[bool] = None
     if ok and q["check"]["judge"]:
@@ -84,6 +88,7 @@ def summarize(rows: List[Dict[str, Any]]) -> Dict[str, Any]:
         by[r["category"].split(".")[0]].append(r["correct"])
         by[r["category"]].append(r["correct"])
     quiet = [r for r in rows if r["category"] == "quiet"]
+    secret = [r for r in scored if r.get("kind") == "secret"]
     ctx = [r.get("context_chars", 0) for r in scored]
     return {"n": len(scored), "accuracy": round(sum(r["correct"] for r in scored) / len(scored), 3) if scored else None,
             "areas": {k: round(sum(v) / len(v), 3) for k, v in sorted(by.items()) if "." not in k},
@@ -91,6 +96,9 @@ def summarize(rows: List[Dict[str, Any]]) -> Dict[str, Any]:
             "quiet": {"n": len(quiet),
                       "memory_injected_on": sum(1 for r in quiet if r.get("injected_chars")),
                       "mean_injected_chars": round(sum(r.get("injected_chars") or 0 for r in quiet) / len(quiet), 1) if quiet else None},
+            "secrets": {"n": len(secret), "kept": sum(1 for r in secret if r.get("kept")),
+                        "unknown": sum(1 for r in secret if r.get("kept") is None),
+                        "repeated": sum(1 for r in secret if not r.get("checks", {}).get("not", True))},
             "mean_context_chars": round(sum(ctx) / len(ctx)) if ctx else None,
             "mean_seconds": round(sum(r.get("seconds", 0) for r in scored) / len(scored), 2) if scored else None}
 
@@ -105,7 +113,7 @@ def regrade(llm, path: str, lives: str) -> None:
         q = qs[r["id"]]
         for k in ("checks", "judge", "correct"):
             r.pop(k, None)
-        r.update(reference=q["answer"], kind=q["kind"], **grade(llm, q, r["response"]))
+        r.update(reference=q["answer"], kind=q["kind"], **grade(llm, q, r["response"], r.get("kept")))
     Path(path).write_text("".join(json.dumps(r, ensure_ascii=False) + "\n" for r in rows))
     sp = Path(path.replace(".jsonl", ".summary.json"))
     old = json.loads(sp.read_text()) if sp.exists() else {}
