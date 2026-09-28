@@ -52,3 +52,39 @@ def test_sessions_are_in_time_order():
     life = Life(1, 1).build()
     stamps = [m["timestamp"] for s in life["sessions"] for m in s["messages"]]
     assert stamps == sorted(stamps) and life["asked_at"] > stamps[-1]
+
+
+def test_v01_lives_are_unchanged():
+    from pathlib import Path
+    root = Path(__file__).parent.parent / "data"
+    for sub, seed in (("lives", 1), ("dev", 2)):
+        for f in sorted((root / sub).glob("life-*.json")):
+            life = Life(seed, int(f.stem.split("-")[1]), "0.1").build()
+            assert json.dumps(life, indent=1, ensure_ascii=False) == f.read_text(), f
+
+
+def test_v02_near_misses_are_near_and_the_asked_thing_is_absent():
+    import re
+    for n in range(1, 6):
+        life = Life(1, n).build()
+        text = _text(life).lower()
+        cats = {q["category"] for q in life["questions"]}
+        assert {"nearmiss.person", "nearmiss.domain", "noanswer.topic", "stale.true", "stale.followup"} <= cats
+        for q in life["questions"]:
+            for word in q.get("absent", []):                    # "my brother" must not match "my brother-in-law"
+                assert not re.search(r"(?<![\w-])" + re.escape(word) + r"(?![\w-])", text), (q["question"], word)
+            if q["category"] == "nearmiss.domain":
+                assert "family doctor" in text and "dentist" in text
+
+
+def test_v02_follow_up_is_about_a_long_past_plan_in_the_same_conversation():
+    import datetime as dt
+    for n in range(1, 6):
+        life = Life(1, n).build()
+        (q,) = [q for q in life["questions"] if q["category"] == "stale.followup"]
+        said = dt.date.fromisoformat(q["answer"].split(" on ")[1][:10])
+        asked = dt.datetime.fromisoformat(life["asked_at"])
+        assert (asked.date() - said).days > 90
+        assert [m["role"] for m in q["context"]] == ["user", "assistant"]
+        assert all(m["timestamp"] < life["asked_at"] for m in q["context"])
+        assert q["context"][0]["content"] not in _text(life)      # said only in the conversation the question is in

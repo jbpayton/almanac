@@ -5,6 +5,8 @@ the reply it captures the turn (so its grounding check sees what was injected). 
   recall  passive | active   active also gives the reader Sophia's recall/query/browse tools, as a Hermes agent has
   night   none | end | daily  when Sophia's night runs: never, once before the questions, or after every day
   api     lmstudio | openai    how Sophia talks to the server (openai: llama-server and other OpenAI-style servers)
+  memories DIR                 keep each life's memory (after its night) in DIR and reuse it on later runs, so
+                               settings that only change recall are compared on identical memories
   any Sophia setting by name, e.g. gate=choice (values are read as JSON when they parse)
 Requires hermes-sophia on the path (pip install -e path/to/hermes-sophia).
 """
@@ -15,8 +17,10 @@ import datetime as dt
 import json
 import re
 import shutil
+import sqlite3
 import tempfile
 from pathlib import Path
+from typing import Optional
 
 from .base import QUESTION, SYSTEM, Adapter
 
@@ -30,7 +34,7 @@ def _ts(s: str) -> float:
 class Sophia(Adapter):
     name = "sophia"
 
-    def _engine(self, user: str):
+    def _engine(self, user: str, copy_from: Optional[Path] = None):
         from hermes_sophia.config import DEFAULTS
         from hermes_sophia.engine import Engine
         cfg = copy.deepcopy(DEFAULTS)
@@ -50,6 +54,8 @@ class Sophia(Adapter):
         cfg["sleep_guard_models"] = []              # a benchmark run: nobody's chat to yield to
         cfg["lms_cli"] = str(Path(cfg["lms_cli"]).expanduser())
         self.tmp = tempfile.mkdtemp(prefix="almanac-sophia-")
+        if copy_from:
+            shutil.copy(copy_from, Path(self.tmp) / "sophia.db")
         return Engine(cfg, Path(self.tmp) / "sophia.db")
 
     def _night(self, now: float):
@@ -58,8 +64,12 @@ class Sophia(Adapter):
 
     def ingest(self, life):
         self.user = life["user"]
-        self.e = self._engine(self.user)
         night = self.opts.get("night", "none")
+        cache = Path(self.opts["memories"]) / f"{life['id']}-night-{night}.db" if self.opts.get("memories") else None
+        if cache and cache.exists():
+            self.e = self._engine(self.user, copy_from=cache)
+            return
+        self.e = self._engine(self.user)
         last_day = None
         for s in life["sessions"]:
             day = s["started"][:10]
@@ -80,19 +90,33 @@ class Sophia(Adapter):
                 i = j
         if night in ("end", "daily"):
             self._night(_ts(life["asked_at"]) - 3600)
+        if cache:                                     # a consistent copy (WAL included), renamed into place
+            cache.parent.mkdir(parents=True, exist_ok=True)
+            part = cache.with_suffix(".part")
+            with sqlite3.connect(Path(self.tmp) / "sophia.db") as src, sqlite3.connect(part) as dst:
+                src.backup(dst)
+            part.replace(cache)
 
-    def ask(self, question, now):
+    def ask(self, question, now, context=None):
+        session = "almanac-ask"
+        if context:                                   # a follow-up: the conversation so far is captured first, as
+            self._asked = getattr(self, "_asked", 0) + 1                 # Hermes does after every turn
+            session = f"almanac-ask-{self._asked}"
+            for u, a in zip(context[::2], context[1::2]):
+                self.e.now_override = _ts(u["timestamp"])
+                self.e.capture_turn(session, u["content"], a["content"])
         self.e.now_override = now.timestamp()
-        text, info = self.e.recall.prefetch(question, "almanac-ask", now=now.timestamp())
+        text, info = self.e.recall.prefetch(question, session, now=now.timestamp())
         memory = text or "(Nothing was recalled for this message.)"
         if self.opts.get("recall", "passive") == "active":
-            answer, calls, tool_chars = self._active(memory, question, now)
+            answer, calls, tool_chars = self._active(memory, question, now, context)
         else:
-            answer, calls, tool_chars = self.read(self.user, memory, question, now), [], 0
+            answer, calls, tool_chars = self.read(self.user, memory, question, now, context), [], 0
         return {"answer": answer, "context_chars": len(text or "") + tool_chars, "injected_chars": len(text or ""),
-                "tool_calls": calls, "gate": info.get("gate")}
+                "tool_calls": calls,
+                "memory": {k: info.get(k) for k in ("gate", "uncertain", "split", "referential") if k in info}}
 
-    def _active(self, memory: str, question: str, now: dt.datetime):
+    def _active(self, memory: str, question: str, now: dt.datetime, context=None):
         from hermes_sophia.tools import SCHEMAS, SYSTEM_NOTE
         import hermes_sophia
         skill = (Path(hermes_sophia.__file__).parent / "skills" / "memory" / "SKILL.md").read_text()
@@ -100,6 +124,7 @@ class Sophia(Adapter):
         tools = [{"type": "function", "function": s} for s in SCHEMAS if s["name"] in ACTIVE_TOOLS]
         messages = [{"role": "system", "content": SYSTEM.format(user=self.user) + "\n\n" + SYSTEM_NOTE + "\n\n" + skill
                      + "\n\n" + memory},
+                    *[{"role": m["role"], "content": m["content"]} for m in context or []],
                     {"role": "user", "content": QUESTION.format(now=now.strftime("%A, %B %d, %Y %H:%M"),
                                                                 user=self.user, question=question)}]
         calls, chars = [], 0

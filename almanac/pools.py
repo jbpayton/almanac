@@ -71,3 +71,53 @@ FILLER = [
     ("What's a fun fact about octopuses?", "They have three hearts, and two of them stop beating while they swim."),
     ("How do I make my resume stand out?", "Lead each bullet with a result and a number, and cut anything older than ten years unless it's essential."),
 ]
+
+# v0.2: questions where a near-miss is dangerous
+# someone else's relative, or an in-law, is mentioned; the question asks about the user's own
+NEARMISS_PEOPLE = [
+    ("My brother-in-law {name} is helping me paint the hallway this weekend.", "What's my brother's name?",
+     "a brother", "brother-in-law"),
+    ("My neighbor's son {name} just started college. Time flies.", "What's my son's name?", "a son", "neighbor's son"),
+    ("My friend {name}'s daughter won her soccer tournament today, we all went to cheer.",
+     "How old is my daughter?", "a daughter", "friend's daughter"),
+    ("My coworker {name}'s wife just opened a bakery downtown, the croissants are unreal.",
+     "What does my wife do for work?", "a wife", "coworker's wife"),
+]
+# the user has a family doctor and a dentist; the question asks about a provider never mentioned
+NEARMISS_PROVIDERS = [("eye doctor", "Who is my eye doctor?"),
+                      ("physical therapist", "What's my physical therapist's name?"),
+                      ("dermatologist", "Which dermatologist do I see?")]
+# a topic the user talks about, and a detail of it they never gave
+CARS = ["Subaru Outback", "Honda Civic", "Toyota RAV4", "Mazda 3", "Ford Maverick", "Kia Soul"]
+NOANSWER = [
+    (["I finally bought a used {car}! Picked it up from the dealer this afternoon.",
+      "Took the {car} in for its first oil change, all good."], "What color is my {car}?", "its color"),
+    (["Started going to a climbing gym near work, I'm hooked.", "Did my first V3 at the climbing gym tonight!"],
+     "What's the name of the climbing gym I go to?", "the gym's name"),
+    (["We adopted a cat from the shelter this weekend, she's very shy.",
+      "The cat finally came out from under the bed today."], "What's my cat's name?", "her name"),
+    (["I signed up for a Spanish class at the community center.", "Spanish class was fun, we practised ordering food."],
+     "What day of the week is my Spanish class?", "which day it is"),
+    (["I've started a huge fantasy series, already on book two.", "Stayed up way too late reading the fantasy series again."],
+     "Which fantasy series am I reading?", "which series"),
+]
+# said once, early, and still true at the end
+STALE_TRUE = [
+    ("allergy", "I'm allergic to penicillin, found that out the hard way as a kid.", "Am I allergic to any medication?",
+     "Yes, penicillin.", ["penicillin"]),
+    ("blood", "My blood type is O negative, the blood bank calls me constantly.", "What's my blood type?", "O negative",
+     ["O negative", "O-", "O neg"]),
+    ("hand", "I'm left-handed, which makes spiral notebooks a nightmare.", "Which hand do I write with?", "The left.",
+     ["left"]),
+    ("shoe", "My shoe size is 10.5, and it's impossible to find in stores.", "What's my shoe size?", "10.5",
+     ["10.5", "10 and a half", "ten and a half"]),
+]
+# a plan with a relative date, never followed up; asked about months later, as a follow-up in the same conversation
+STALE_PLANS = [
+    ("I'm going to repaint the kitchen next weekend, I finally picked a color.",
+     "I was just looking at paint swatches, thinking about the kitchen again.", "the kitchen repaint"),
+    ("We're having a garage sale next Saturday to clear out the basement.",
+     "I was going through the basement boxes again today.", "the garage sale"),
+    ("{friend} and I are going camping at the lake next weekend.",
+     "{friend} texted me a photo of the lake earlier.", "the camping trip with {friend}"),
+]

@@ -12,7 +12,9 @@ QUESTION = "Current date and time: {now}\n{user}: {question}\nAnswer concisely."
 
 class Adapter:
     """ingest(life) once, then ask(question, now) for each question. ask() returns
-    {"answer": str, "context_chars": int, "injected_chars": int | None, "tool_calls": [...]}"""
+    {"answer": str, "context_chars": int, "injected_chars": int | None, "tool_calls": [...], "memory": {...}}
+    ("memory": optional, whatever the system reports about its recall, e.g. a gate's decision).
+    A follow-up question comes with ``context``: the earlier messages of the conversation it is asked in."""
     name = "base"
 
     def __init__(self, llm, **opts):
@@ -21,7 +23,7 @@ class Adapter:
     def ingest(self, life: Dict[str, Any]) -> None:
         raise NotImplementedError
 
-    def ask(self, question: str, now: dt.datetime) -> Dict[str, Any]:
+    def ask(self, question: str, now: dt.datetime, context: Optional[List[Dict[str, Any]]] = None) -> Dict[str, Any]:
         raise NotImplementedError
 
     def holds(self, text: str) -> Optional[bool]:
@@ -32,9 +34,11 @@ class Adapter:
         pass
 
     # shared: one reader call over a block of remembered text
-    def read(self, user: str, memory: str, question: str, now: dt.datetime) -> str:
+    def read(self, user: str, memory: str, question: str, now: dt.datetime,
+             context: Optional[List[Dict[str, Any]]] = None) -> str:
         msg = self.llm.chat(self.llm.reader, [
             {"role": "system", "content": SYSTEM.format(user=user) + "\n\n" + memory},
+            *[{"role": m["role"], "content": m["content"]} for m in context or []],
             {"role": "user", "content": QUESTION.format(now=now.strftime("%A, %B %d, %Y %H:%M"), user=user,
                                                         question=question)}], max_tokens=500)
         return (msg.get("content") or "").strip()

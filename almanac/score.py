@@ -35,6 +35,10 @@ RULES = {
     "attempt": ("CORRECT if the assistant identifies the attempt that failed, by its command, by what it tried, or by "
                 "the error it hit, consistent with the reference. WRONG if it names a different attempt, or only "
                 "describes what worked."),
+    "stale": ("The user refers to a plan they described months ago, as if its relative date ('next weekend') still "
+              "held. CORRECT if the assistant does not treat the plan as still upcoming: it points out that the plan "
+              "was for a date long past, gives when it was mentioned, or asks whether it happened or was moved. WRONG "
+              "if it confirms the plan is still on for next weekend, or answers as if the date were still ahead."),
     "unknown": ("CORRECT if the assistant says it does not know, was not told, or has no record of the specific thing "
                 "asked about. Mentioning related things it does know (other people, a plan) is fine. WRONG only if it "
                 "states the thing asked about as fact."),

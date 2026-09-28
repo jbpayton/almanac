@@ -49,7 +49,8 @@ def main():
         files = [f for f in files if f.stem in set(args.only.split(","))]
     for f in files:
         life = json.loads(f.read_text())
-        todo = [q for q in life["questions"] if q["id"] not in done]
+        # follow-ups last: a system may capture their conversation, which must not reach the other questions
+        todo = sorted((q for q in life["questions"] if q["id"] not in done), key=lambda q: bool(q.get("context")))
         if not todo:
             continue
         adapter = Adapter(llm, **opts)
@@ -63,12 +64,12 @@ def main():
                 held = [adapter.holds(s) for s in q["check"]["not"]]
                 kept = None if None in held else any(held)
             t = time.time()
-            r = adapter.ask(q["question"], now)
+            r = adapter.ask(q["question"], now, **({"context": q["context"]} if q.get("context") else {}))
             row = {"id": q["id"], "life": life["id"], "category": q["category"], "kind": q["kind"],
                    "question": q["question"], "reference": q["answer"], "response": r["answer"],
                    "context_chars": r.get("context_chars"), "injected_chars": r.get("injected_chars"),
                    "tool_calls": r.get("tool_calls"), "seconds": round(time.time() - t, 2), "ingest_seconds": ingest_s,
-                   "kept": kept}
+                   "kept": kept, **({"memory": r["memory"]} if r.get("memory") else {})}
             row.update(grade(llm, q, r["answer"], kept))
             with open(out, "a") as fh:
                 fh.write(json.dumps(row, ensure_ascii=False) + "\n")

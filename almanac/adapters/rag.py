@@ -32,9 +32,9 @@ class Rag(Adapter):
         n = math.sqrt(sum(x * x for x in v)) or 1.0
         return [x / n for x in v]
 
-    def ask(self, question, now):
+    def ask(self, question, now, context=None):                  # retrieval uses the question alone, as most RAG does
         q = self._norm(self.llm.embed(["search_query: " + question])[0])
         scored = sorted(range(len(self.items)), key=lambda i: -sum(a * b for a, b in zip(q, self.vecs[i])))[:self.k]
         memory = "Relevant memories:\n" + "\n".join(f"- [{self.items[i][0]}] {self.items[i][1]}" for i in sorted(scored))
-        return {"answer": self.read(self.user, memory, question, now), "context_chars": len(memory),
+        return {"answer": self.read(self.user, memory, question, now, context), "context_chars": len(memory),
                 "injected_chars": len(memory)}

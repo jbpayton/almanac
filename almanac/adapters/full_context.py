@@ -20,6 +20,6 @@ class FullContext(Adapter):
     def holds(self, text):
         return text in self.transcript
 
-    def ask(self, question, now):
-        return {"answer": self.read(self.user, self.transcript, question, now), "context_chars": len(self.transcript),
-                "injected_chars": None}
+    def ask(self, question, now, context=None):
+        return {"answer": self.read(self.user, self.transcript, question, now, context),
+                "context_chars": len(self.transcript), "injected_chars": None}

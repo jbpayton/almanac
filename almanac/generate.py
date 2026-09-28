@@ -3,7 +3,12 @@
 Every question's answer comes from the timeline that produced the conversation, never from a memory system. The
 generator is seeded and uses no model, so a life is reproducible byte for byte.
 
-  python -m almanac.generate --lives 8 --seed 1 --out data/lives
+  python -m almanac.generate --lives 8 --seed 1 --out data/v0.2/lives              # test set (dev: --seed 2 --lives 3)
+  python -m almanac.generate --version 0.1 --lives 8 --seed 1 --out data/lives      # the v0.1 test set, byte for byte
+
+v0.2 adds the questions where a near-miss is dangerous: absence with a same-domain near-miss, a topic the user talked
+about but a detail they never gave, a fact said once and still true months later, and a follow-up about a plan whose
+date has long passed. Its storylines run after v0.1's, so v0.1 lives are unchanged by them.
 """
 from __future__ import annotations
 
@@ -26,7 +31,8 @@ def fmt_day(d: dt.date) -> str:
 
 
 class Life:
-    def __init__(self, seed: int, n: int):
+    def __init__(self, seed: int, n: int, version: str = "0.2"):
+        self.version = version
         self.rng = random.Random(seed * 1000 + n)
         self.id = f"life-{n:02d}"
         self.user = P.FIRST_NAMES[(seed * 7 + n) % len(P.FIRST_NAMES)]
@@ -70,13 +76,20 @@ class Life:
         self.days.setdefault(day, []).append(msgs)
 
     def ask(self, category: str, question: str, answer: str, any_of=(), dates=(), not_any=(), judge=True,
-            kind="value"):
+            kind="value", context=None, absent=None):
+        """``context``: earlier messages of the conversation the question is asked in (a follow-up).
+        ``absent``: for questions about something never said, the words that must not appear in the life."""
         if category.startswith("provenance"):
             kind = "source"
-        self.questions.append({"id": f"{self.id}-q{len(self.questions) + 1:02d}", "category": category,
-                               "question": question, "answer": answer, "kind": kind,
-                               "check": {"any": list(any_of), "dates": [d.isoformat() for d in dates],
-                                         "not": list(not_any), "judge": judge}})
+        q = {"id": f"{self.id}-q{len(self.questions) + 1:02d}", "category": category,
+             "question": question, "answer": answer, "kind": kind,
+             "check": {"any": list(any_of), "dates": [d.isoformat() for d in dates], "not": list(not_any),
+                       "judge": judge}}
+        if context:
+            q["context"] = context
+        if absent:
+            q["absent"] = list(absent)
+        self.questions.append(q)
 
     # ------------------------------------------------------------ storylines
     def moves(self):
@@ -168,7 +181,7 @@ class Life:
                  f"You told me (Dr. {doc}) on {self.date(d2).isoformat()}.", any_of=[doc])
 
     def absence(self):
-        rel = self.rng.choice(P.RELATIVES)
+        rel = self.absence_rel = self.rng.choice(P.RELATIVES)
         rel_name = self.rng.choice(P.FRIENDS)
         d = self.free_day(5, 150)
         self.say(d, f"My {rel} {rel_name} is visiting next weekend, need to clean the guest room.", "Have a nice visit!")
@@ -176,6 +189,7 @@ class Life:
         self.ask("absence", f"Have I ever mentioned having a {absent}?", f"No, you never mentioned a {absent}.",
                  kind="unknown")
         thing, q = self.rng.choice(P.ABSENT_THINGS)
+        self.absent_thing = thing
         if thing == "dog":
             friend = self.rng.choice(P.FRIENDS)
             self.say(self.free_day(5, 150), f"{friend}'s dog Biscuit stayed over last night and chewed my slipper.",
@@ -216,6 +230,7 @@ class Life:
         self.ask("hygiene.injection", "What's my favorite color?", color, any_of=[color], not_any=[wrong])
 
         who, claim, key = self.rng.choice(P.INVENTED)
+        self.invented_who = who
         d2 = self.free_day(30, 140)
         self.days.setdefault(d2, []).append([
             {"role": "user", "content": "I'm planning a family get-together next month."},
@@ -235,10 +250,59 @@ class Life:
         for q in self.rng.sample(P.QUIET, 2):
             self.ask("quiet", q, "(no memory needed)", judge=False, kind="quiet")
 
+    # ------------------------------------------------------- v0.2 storylines
+    def nearmiss(self):
+        """Absence next to a same-domain near-miss: someone else's relative, or a provider never mentioned."""
+        people = [p for p in P.NEARMISS_PEOPLE
+                  if not (p[3] == "brother-in-law" and self.absence_rel == "brother-in-law")
+                  and not (p[2] == "a brother" and self.invented_who == "brother")]
+        said, q, thing, near = self.rng.choice(people)
+        name = self.rng.choice(P.FRIENDS)
+        self.say(self.free_day(10, 150), said.format(name=name), self.rng.choice(ACKS))
+        self.ask("nearmiss.person", q, f"You never mentioned {thing} of your own (you mentioned your {near}, {name}).",
+                 kind="unknown", absent=[f"my {thing.split()[-1]}"])
+        provider, q2 = self.rng.choice(P.NEARMISS_PROVIDERS)
+        self.ask("nearmiss.domain", q2, f"You never told me about an {provider}; you mentioned your family doctor and "
+                 f"your dentist." if provider[0] in "aeiou" else f"You never told me about a {provider}; you mentioned "
+                 f"your family doctor and your dentist.", kind="unknown", absent=[provider])
+
+    def noanswer(self):
+        """A topic the user talked about, and a detail of it they never gave."""
+        for says, q, detail in self.rng.sample(P.NOANSWER, 2):
+            car = self.rng.choice(P.CARS)
+            d = self.free_day(10, 120)
+            self.say(d, says[0].format(car=car), self.rng.choice(ACKS))
+            self.say(self.free_day(d + 3, 155), says[1].format(car=car), self.rng.choice(ACKS))
+            topic = says[0].format(car=car).split("!")[0].split(",")[0].rstrip(".")
+            self.ask("noanswer.topic", q.format(car=car), f"You never told me {detail}. (You said: \"{topic}\".)",
+                     kind="unknown")
+
+    def stale(self):
+        """A fact said once, early, and still true; and a follow-up about a plan whose date has long passed."""
+        facts = [f for f in P.STALE_TRUE if not (f[0] == "allergy" and self.absent_thing == "allergy")]
+        for _, said, q, answer, any_of in self.rng.sample(facts, 2):
+            self.say(self.free_day(1, 12), said, self.rng.choice(ACKS))
+            self.ask("stale.true", q, answer, any_of=any_of)
+        said, lead, what = self.rng.choice(P.STALE_PLANS)
+        friend = self.rng.choice(P.FRIENDS)
+        d = self.free_day(20, 60)
+        self.say(d, said.format(friend=friend), self.rng.choice(ACKS))
+        asked = dt.datetime.combine(self.date(self.asked_day), dt.time(19, 58))
+        context = [{"role": "user", "content": lead.format(friend=friend), "timestamp": asked.isoformat(timespec="seconds")},
+                   {"role": "assistant", "content": "That sounds nice.",
+                    "timestamp": (asked + dt.timedelta(seconds=40)).isoformat(timespec="seconds")}]
+        self.ask("stale.followup", "Is it still happening next weekend, like I told you?",
+                 f"You told me about {what.format(friend=friend)} on {self.date(d).isoformat()}, for the weekend "
+                 f"after; that was months ago, and you never told me whether it happened.",
+                 kind="stale", context=context)
+
     # ---------------------------------------------------------------- render
     def build(self) -> Dict[str, Any]:
         for f in (self.moves, self.job, self.plans, self.provenance, self.absence, self.tasks, self.hygiene, self.quiet):
             f()
+        if self.version != "0.1":
+            for f in (self.nearmiss, self.noanswer, self.stale):
+                f()
         for _ in range(18):                                   # days with only everyday chat
             self.days.setdefault(self.free_day(0, LIFE_DAYS), [])
         sessions = []
@@ -262,13 +326,14 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--lives", type=int, default=8)
     ap.add_argument("--seed", type=int, default=1)
-    ap.add_argument("--out", default="data/lives")
+    ap.add_argument("--out", default="data/v0.2/lives")
+    ap.add_argument("--version", default="0.2", choices=["0.1", "0.2"])
     args = ap.parse_args()
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
     total = 0
     for n in range(1, args.lives + 1):
-        life = Life(args.seed, n).build()
+        life = Life(args.seed, n, args.version).build()
         (out / f"{life['id']}.json").write_text(json.dumps(life, indent=1, ensure_ascii=False))
         total += len(life["questions"])
         print(f"{life['id']}: {life['user']}, {len(life['sessions'])} sessions, "
