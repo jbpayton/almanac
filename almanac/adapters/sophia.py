@@ -93,8 +93,13 @@ class Sophia(Adapter):
         if cache:                                     # a consistent copy (WAL included), renamed into place
             cache.parent.mkdir(parents=True, exist_ok=True)
             part = cache.with_suffix(".part")
-            with sqlite3.connect(Path(self.tmp) / "sophia.db") as src, sqlite3.connect(part) as dst:
+            src, dst = sqlite3.connect(Path(self.tmp) / "sophia.db"), sqlite3.connect(part)
+            try:                                      # closed before the rename, and one file with no WAL beside it
                 src.backup(dst)
+                dst.execute("PRAGMA journal_mode=DELETE")
+            finally:
+                dst.close()
+                src.close()
             part.replace(cache)
 
     def ask(self, question, now, context=None):
