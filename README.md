@@ -62,13 +62,13 @@ python -m almanac.run --adapter full-context --out results/full-context.jsonl
 python -m almanac.score results/*.jsonl
 ```
 
-The reader and the judge are any OpenAI-compatible chat model (`--url`, `--reader`, `--judge`; LM Studio by default). The included adapters are:
+The reader and the judge are any OpenAI-compatible chat model (`--url`, `--reader`, `--judge`; LM Studio by default, `--api openai` for llama-server and other OpenAI-style servers). The included adapters are:
 
 | Adapter | What it is |
 |---|---|
 | `full-context` | Every past conversation in the reader's context: no memory system at all |
 | `rag` | Every message embedded; the top 15 by cosine similarity handed to the reader |
-| `sophia` | [hermes-sophia](https://github.com/jbpayton/hermes-sophia), ingested live turn by turn as Hermes runs it. Options: `recall=passive\|active` (active adds its memory tools), `night=none\|end\|daily` |
+| `sophia` | [hermes-sophia](https://github.com/jbpayton/hermes-sophia), ingested live turn by turn as Hermes runs it. Options: `recall=passive\|active` (active adds its memory tools), `night=none\|end\|daily`, and any Sophia setting by name (`--opt gate=choice`) |
 
 ## Results
 

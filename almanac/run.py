@@ -27,6 +27,8 @@ def main():
     ap.add_argument("--lives", default="data/lives")
     ap.add_argument("--only", default="", help="comma-separated life ids")
     ap.add_argument("--url", default="http://127.0.0.1:1234")
+    ap.add_argument("--api", default="lmstudio", choices=["lmstudio", "openai"],
+                    help="server type: lmstudio, or openai for llama-server and other OpenAI-style servers")
     ap.add_argument("--reader", default="qwen/qwen3.8-27b")
     ap.add_argument("--judge", default="qwen/qwen3.8-27b")
     ap.add_argument("--embed", default="nomic-embed")
@@ -34,7 +36,8 @@ def main():
     args = ap.parse_args()
     opts = dict(kv.split("=", 1) for kv in args.opt)
     opts.setdefault("embed", args.embed)
-    llm = LLM(args.url, reader=args.reader, judge=args.judge, embed=args.embed)
+    opts.setdefault("api", args.api)
+    llm = LLM(args.url, reader=args.reader, judge=args.judge, embed=args.embed, reasoning_off=args.api)
     import importlib
     mod, cls = ADAPTERS[args.adapter]
     Adapter = getattr(importlib.import_module(mod), cls)

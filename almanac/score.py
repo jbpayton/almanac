@@ -127,12 +127,13 @@ def main():
     ap.add_argument("--regrade", action="store_true", help="grade the saved answers again with the current rules")
     ap.add_argument("--lives", default="data/lives")
     ap.add_argument("--url", default="http://127.0.0.1:1234")
+    ap.add_argument("--api", default="lmstudio", choices=["lmstudio", "openai"])
     ap.add_argument("--judge", default="qwen/qwen3.8-27b")
     args = ap.parse_args()
     for f in args.files:
         if args.regrade:
             from .llm import LLM
-            regrade(LLM(args.url, reader=args.judge, judge=args.judge, embed=""), f, args.lives)
+            regrade(LLM(args.url, reader=args.judge, judge=args.judge, embed="", reasoning_off=args.api), f, args.lives)
         rows = [json.loads(l) for l in open(f)]
         s = summarize(rows)
         print(f"\n{f}: accuracy {s['accuracy']} over {s['n']}  | areas {s['areas']}")

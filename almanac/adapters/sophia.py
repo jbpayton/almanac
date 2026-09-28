@@ -4,6 +4,8 @@ Ingestion is live, turn by turn, the way Hermes runs it: before each user messag
 the reply it captures the turn (so its grounding check sees what was injected). Options:
   recall  passive | active   active also gives the reader Sophia's recall/query/browse tools, as a Hermes agent has
   night   none | end | daily  when Sophia's night runs: never, once before the questions, or after every day
+  api     lmstudio | openai    how Sophia talks to the server (openai: llama-server and other OpenAI-style servers)
+  any Sophia setting by name, e.g. gate=choice (values are read as JSON when they parse)
 Requires hermes-sophia on the path (pip install -e path/to/hermes-sophia).
 """
 from __future__ import annotations
@@ -37,6 +39,14 @@ class Sophia(Adapter):
                    sleep_model=self.opts.get("night_model", "qwen35-9b"), user_name=user, agent_name="Assistant",
                    embed_timeout=60.0, decider_timeout=60.0, sleep_call_timeout=600.0,
                    night_parallel=int(self.opts.get("night_parallel", 2)))
+        if self.opts.get("api"):
+            cfg.update(embed_api=self.opts["api"], decider_api=self.opts["api"], sleep_api=self.opts["api"])
+        for k, v in self.opts.items():
+            if k in DEFAULTS and k != "night_parallel":
+                try:
+                    cfg[k] = json.loads(v)
+                except ValueError:
+                    cfg[k] = v
         cfg["sleep_guard_models"] = []              # a benchmark run: nobody's chat to yield to
         cfg["lms_cli"] = str(Path(cfg["lms_cli"]).expanduser())
         self.tmp = tempfile.mkdtemp(prefix="almanac-sophia-")
